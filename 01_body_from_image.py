@@ -1,71 +1,34 @@
-# From Python
-# It requires OpenCV installed for Python
-import sys
 import cv2
-import os
-from sys import platform
-import argparse
+import pyopenpose as op
+from imutils import translate, rotate, resize
 
-# Import Openpose (Windows/Ubuntu/OSX)
-dir_path = os.path.dirname(os.path.realpath(__file__))
-try:
-    # Windows Import
-    if platform == "win32":
-        # Change these variables to point to the correct folder (Release/x64 etc.) 
-        sys.path.append(dir_path + '/../../python/openpose/Release');
-        os.environ['PATH']  = os.environ['PATH'] + ';' + dir_path + '/../../x64/Release;' +  dir_path + '/../../bin;'
-        import pyopenpose as op
-    else:
-        # Change these variables to point to the correct folder (Release/x64 etc.) 
-        #sys.path.append('../../python');
-        # If you run `make install` (default path is `/usr/local/python` for Ubuntu), you can also access the OpenPose/python module from there. This will install OpenPose and the python library at your desired installation path. Ensure that this is in your python path in order to use it.
-        # sys.path.append('/usr/local/python')
-        import pyopenpose as op
-except ImportError as e:
-    print('Error: OpenPose library could not be found. Did you enable `BUILD_PYTHON` in CMake and have this Python script in the right folder?')
-    raise e
-
-# Flags
-parser = argparse.ArgumentParser()
-parser.add_argument("--image_path", default="../media/COCO_val2014_000000000192.jpg", help="Process an image. Read all standard formats (jpg, png, bmp, etc.).")
-args = parser.parse_known_args()
+import numpy as np
 
 # Custom Params (refer to include/openpose/flags.hpp for more parameters)
 params = dict()
 params["model_folder"] = "../../models/"
 
-# Add others in path?
-for i in range(0, len(args[1])):
-    curr_item = args[1][i]
-    if i != len(args[1])-1: next_item = args[1][i+1]
-    else: next_item = "1"
-    if "--" in curr_item and "--" in next_item:
-        key = curr_item.replace('-','')
-        if key not in params:  params[key] = "1"
-    elif "--" in curr_item and "--" not in next_item:
-        key = curr_item.replace('-','')
-        if key not in params: params[key] = next_item
+vs = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720,format=(string)NV12, framerate=(fraction)24/1 ! nvvidconv flip-method=0 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink")
 
-# Construct it from system arguments
-# op.init_argv(args[1])
-# oppython = op.OpenposePython()
+# Starting OpenPose
+opWrapper = op.WrapperPython()
+opWrapper.configure(params)
+opWrapper.start()
 
-try:
-    # Starting OpenPose
-    opWrapper = op.WrapperPython()
-    opWrapper.configure(params)
-    opWrapper.start()
-    
-    # Process Image
-    datum = op.Datum()
-    imageToProcess = cv2.imread(args[0].image_path)
-    datum.cvInputData = imageToProcess
+datum = op.Datum()
+
+while True:
+    ret_val, frame = vs.read()
+
+    datum.cvInputData = frame
     opWrapper.emplaceAndPop([datum])
+    # print("Body keypoints: \n" + str(datum.poseKeypoints))
+    cv2.imshow("Openpose", datum.cvOutputData)
 
-    # Display Image
-    print("Body keypoints: \n" + str(datum.poseKeypoints))
-    cv2.imshow("OpenPose 1.5.0 - Tutorial Python API", datum.cvOutputData)
-    cv2.waitKey(0)
-except Exception as e:
-    # print(e)
-    sys.exit(-1)
+    # quit with a q keypress
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
+        break
+
+cv2.destroyAllWindows()
+vs.stop()
