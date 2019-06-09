@@ -16,19 +16,41 @@ opWrapper.configure(params)
 opWrapper.start()
 
 datum = op.Datum()
+np.set_printoptions(precision=4)
+
+dabs = []
+tposes = []
 
 while True:
     ret_val, frame = vs.read()
 
     datum.cvInputData = frame
     opWrapper.emplaceAndPop([datum])
-    # print("Body keypoints: \n" + str(datum.poseKeypoints))
-    cv2.imshow("Openpose", datum.cvOutputData)
 
-    # quit with a q keypress
+    # need to be able to see what's going on
+    cv2.imshow("Openpose", datum.cvOutputData)
+ 
+   # quit with a q keypress, b or m to save data
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
+    elif key == ord("b"):
+        print("Dab: " + str(datum.poseKeypoints))
+        dabs.append(datum.poseKeypoints[0])
+    elif key == ord("m"):
+        print("TPose: " + str(datum.poseKeypoints))
+        tposes.append(datum.poseKeypoints[0])
 
+# write our data as numpy binary files
+# for analysis later
+
+dabs = np.asarray(dabs)
+tposes = np.asarray(tposes)
+
+np.save('dabs.npy', dabs)
+np.save('tposes.npy', tposes)
+
+# clean up after yourself
+vs.release()
 cv2.destroyAllWindows()
-vs.stop()
+
