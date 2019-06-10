@@ -18,3 +18,19 @@ Followed by inserting the following lines to add perms to the `/dev/ttyUSB*` and
 KERNEL=="ttyUSB[0-9]*",MODE="0666"
 KERNEL=="ttyACM[0-9]*",MODE="0666"
 ```
+
+## Getting an OpenPose Model running on the TX2
+
+There are two ways, I started out by using the original [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) repo to get a build and proof of concept running.
+
+I got probably half a frame per second out of that? You can see how I initialize and use the built in devboard camera in the `01_body_from_image.py` file in this repo. That comes directly out of the included Python examples.
+
+Because I wanted better response time, I ended up searching for a better model. I found [tf-pose-estimation](https://github.com/ildoonet/tf-pose-estimation).
+
+It requires Tensorflow, so be sure to grab the latest Jetpack release from NVIDIA [here](https://developer.nvidia.com/embedded/downloads#?search=tensorflow) when installing.
+
+After that, it should run with the included `run_webcam.py`, just be sure to run it with the right model. Mobilenet_v2_large was the bare minimum for an acceptable detection for me:
+
+```bash
+$ python3 run_webcam.py --model=mobilenet_v2_large --resize=432x368
+```
