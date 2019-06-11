@@ -2,6 +2,7 @@ import cv2
 import pyopenpose as op
 from imutils import translate, rotate, resize
 
+import time
 import numpy as np
 
 # Custom Params (refer to include/openpose/flags.hpp for more parameters)
@@ -21,6 +22,8 @@ np.set_printoptions(precision=4)
 dabs = []
 tposes = []
 
+fps_time = 0
+
 while True:
     ret_val, frame = vs.read()
 
@@ -28,9 +31,16 @@ while True:
     opWrapper.emplaceAndPop([datum])
 
     # need to be able to see what's going on
-    cv2.imshow("Openpose", datum.cvOutputData)
- 
-   # quit with a q keypress, b or m to save data
+    image = datum.cvOutputData
+    cv2.putText(image,
+                "FPS: %f" % (1.0 / (time.time() - fps_time)),
+                (10, 10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                (0, 255, 0), 2)
+    
+    cv2.imshow("Openpose", image)
+    fps_time = time.time()
+    
+    # quit with a q keypress, b or m to save data
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
