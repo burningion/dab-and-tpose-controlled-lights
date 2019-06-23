@@ -36,3 +36,7 @@ $ python3 run_webcam.py --model=mobilenet_v2_large --resize=432x368
 ```
 
 With this model, I get 4(ish) frames per second on the TX2, much better for detection latency. I may try seeing if I can optimize further after getting a full proof of concept running.
+
+## Exploring OpenPose Data for Training a New Classifier
+
+We'll use some saved examples of T-Poses and Dabs in order to train our classifier. You can see the Jupyter notebook [here](https://github.com/burningion/dab-and-tpose-controlled-lights/blob/master/Data%20Play.ipynb) with examples of labeling and converting our raw `npy` Numpy exports to CSVs and Pandas datasets.
