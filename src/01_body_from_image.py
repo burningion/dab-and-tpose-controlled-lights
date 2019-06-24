@@ -21,6 +21,7 @@ np.set_printoptions(precision=4)
 
 dabs = []
 tposes = []
+other = []
 
 fps_time = 0
 
@@ -50,15 +51,20 @@ while True:
     elif key == ord("m"):
         print("TPose: " + str(datum.poseKeypoints))
         tposes.append(datum.poseKeypoints[0])
+    elif key == ord("/"):
+        print("Other: " + str(datum.poseKeypoints))
+        other.append(datum.poseKeypoints[0])
 
 # write our data as numpy binary files
 # for analysis later
 
 dabs = np.asarray(dabs)
 tposes = np.asarray(tposes)
+other = np.asarray(other)
 
 np.save('dabs.npy', dabs)
 np.save('tposes.npy', tposes)
+np.save('other.npy', other)
 
 # clean up after yourself
 vs.release()
