@@ -2,11 +2,24 @@ import cv2
 import pyopenpose as op
 from imutils import translate, rotate, resize
 
+import openzwave
+from openzwave.option import ZWaveOption
+from openzwave.network import ZWaveNetwork
+
+# make sure these commands get flushed by doing them first, then loading tensorflow...
+# tensorflow should take enough time to start for these commands to flush
+options = ZWaveOption('/dev/ttyACM0')
+options.lock()
+
+network = ZWaveNetwork(options)
+
 import time
 import numpy as np
+np.random.seed(1337)
 
 import tensorflow as tf
 
+# make sure tensorflow doesn't take up all the gpu memory
 conf = tf.ConfigProto()
 conf.gpu_options.allow_growth=True
 session = tf.Session(config=conf)
@@ -17,6 +30,7 @@ import keras
 params = dict()
 params["model_folder"] = "../../models/"
 
+# built in TX2 video capture source
 vs = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720,format=(string)NV12, framerate=(fraction)24/1 ! nvvidconv flip-method=0 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink")
 
 tposer = keras.models.load_model('dab-tpose-other.h5')
@@ -31,9 +45,14 @@ np.set_printoptions(precision=4)
 
 fps_time = 0
 
-DAB = 0
-TPOSE = 1
-OTHER = 2
+DAB = 1
+TPOSE = 2
+OTHER = 0
+
+LIGHTS = 0
+
+bounced = time.time()
+debounce = 3 # wait 3 seconds before allowing another command
 
 while True:
     ret_val, frame = vs.read()
@@ -53,20 +72,34 @@ while True:
     if datum.poseKeypoints.any():
         first_input = datum.poseKeypoints
         try:
-            first_input[:,:,0] = first_input[:,:,0] / 1280
-            first_input[:,:,1] = first_input[:,:,1] / 720
+            first_input[:,:,0] = first_input[:,:,0] / 720
+            first_input[:,:,1] = first_input[:,:,1] / 1280
             first_input = first_input[:,:,1:]
             first_input = first_input.reshape(len(datum.poseKeypoints), 50)
         except:
             continue
 
         output = tposer.predict_classes(first_input)
-        print(output)
         for j in output:
-            if j == 0:
+            if j == 1:
                 print("dab detected")
-            elif j == 1:
+                if LIGHTS == 0 or (time.time() - bounced) < debounce:
+                    continue
+                for node in network.nodes:
+                    for val in network.nodes[node].get_switches():
+                        network.nodes[node].set_switch(val, False)
+                LIGHTS = 0
+                bounced = time.time()
+            elif j == 2:
                 print("tpose detected")
+                if LIGHTS == 1 or (time.time() - bounced) < debounce:
+                    continue
+                for node in network.nodes:
+                    for val in network.nodes[node].get_switches():
+                        network.nodes[node].set_switch(val, True)
+                LIGHTS = 1
+                bounced = time.time()
+
     fps_time = time.time()
     
     # quit with a q keypress, b or m to save data
